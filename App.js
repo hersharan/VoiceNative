@@ -1,188 +1,276 @@
-// /**
-//  * Sample React Native App
-//  * https://github.com/facebook/react-native
-//  *
-//  * @format
-//  * @flow strict-local
-//  */
-
-// import React from 'react';
-// import {
-//   SafeAreaView,
-//   StyleSheet,
-//   ScrollView,
-//   View,
-//   Text,
-//   StatusBar,
-// } from 'react-native';
-
-// import {
-//   Header,
-//   LearnMoreLinks,
-//   Colors,
-//   DebugInstructions,
-//   ReloadInstructions,
-// } from 'react-native/Libraries/NewAppScreen';
-
-// const App: () => React$Node = () => {
-//   return (
-//     <>
-//       <StatusBar barStyle="dark-content" />
-//       <SafeAreaView>
-//         <ScrollView
-//           contentInsetAdjustmentBehavior="automatic"
-//           style={styles.scrollView}>
-//           <Header />
-//           {global.HermesInternal == null ? null : (
-//             <View style={styles.engine}>
-//               <Text style={styles.footer}>Engine: Hermes</Text>
-//             </View>
-//           )}
-//           <View style={styles.body}>
-//             <View style={styles.sectionContainer}>
-//               <Text style={styles.sectionTitle}>Step One</Text>
-//               <Text style={styles.sectionDescription}>
-//                 Edit <Text style={styles.highlight}>App.js</Text> to change this
-//                 screen and then come back to see your edits.
-//               </Text>
-//             </View>
-//             <View style={styles.sectionContainer}>
-//               <Text style={styles.sectionTitle}>See Your Changes</Text>
-//               <Text style={styles.sectionDescription}>
-//                 <ReloadInstructions />
-//               </Text>
-//             </View>
-//             <View style={styles.sectionContainer}>
-//               <Text style={styles.sectionTitle}>Debug</Text>
-//               <Text style={styles.sectionDescription}>
-//                 <DebugInstructions />
-//               </Text>
-//             </View>
-//             <View style={styles.sectionContainer}>
-//               <Text style={styles.sectionTitle}>Learn More</Text>
-//               <Text style={styles.sectionDescription}>
-//                 Read the docs to discover what to do next:
-//               </Text>
-//             </View>
-//             <LearnMoreLinks />
-//           </View>
-//         </ScrollView>
-//       </SafeAreaView>
-//     </>
-//   );
-// };
-
-// const styles = StyleSheet.create({
-//   scrollView: {
-//     backgroundColor: Colors.lighter,
-//   },
-//   engine: {
-//     position: 'absolute',
-//     right: 0,
-//   },
-//   body: {
-//     backgroundColor: Colors.white,
-//   },
-//   sectionContainer: {
-//     marginTop: 32,
-//     paddingHorizontal: 24,
-//   },
-//   sectionTitle: {
-//     fontSize: 24,
-//     fontWeight: '600',
-//     color: Colors.black,
-//   },
-//   sectionDescription: {
-//     marginTop: 8,
-//     fontSize: 18,
-//     fontWeight: '400',
-//     color: Colors.dark,
-//   },
-//   highlight: {
-//     fontWeight: '700',
-//   },
-//   footer: {
-//     color: Colors.dark,
-//     fontSize: 12,
-//     fontWeight: '600',
-//     padding: 4,
-//     paddingRight: 12,
-//     textAlign: 'right',
-//   },
-// });
-
-// export default App;
-
-// App.js
 import React from 'react';
-import { StyleSheet, Text, View, Button, AppRegistry } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Image,
+  TouchableHighlight,
+  TextInput,
+  Button,
+} from 'react-native';
 import Voice from '@react-native-community/voice';
+import axios from 'axios';
+
+axios.defaults.baseURL =
+  'http://ec2-52-211-229-144.eu-west-1.compute.amazonaws.com:81';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
 export default class VoiceNative extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       recognized: '',
+      pitch: '',
+      error: '',
+      end: '',
       started: '',
       results: [],
+      partialResults: [],
+      searchTerm: '',
+      searchSuccess: false,
     };
-    Voice.onSpeechStart = this.onSpeechStart.bind(this);
-    Voice.onSpeechRecognized = this.onSpeechRecognized.bind(this);
-    Voice.onSpeechResults = this.onSpeechResults.bind(this);
+    Voice.onSpeechStart = this.onSpeechStart;
+    Voice.onSpeechRecognized = this.onSpeechRecognized;
+    Voice.onSpeechEnd = this.onSpeechEnd;
+    Voice.onSpeechError = this.onSpeechError;
+    Voice.onSpeechResults = this.onSpeechResults;
+    Voice.onSpeechPartialResults = this.onSpeechPartialResults;
+    Voice.onSpeechVolumeChanged = this.onSpeechVolumeChanged;
+    this.onSearch = this.onSearch.bind(this);
   }
+
   componentWillUnmount() {
     Voice.destroy().then(Voice.removeAllListeners);
   }
-  onSpeechStart(e) {
+
+  onSpeechStart = (e) => {
+    console.log('onSpeechStart: ', e);
     this.setState({
       started: '√',
     });
-  }
-  onSpeechRecognized(e) {
+  };
+
+  onSpeechRecognized = (e) => {
+    console.log('onSpeechRecognized: ', e);
     this.setState({
       recognized: '√',
     });
-  }
-  onSpeechResults(e) {
+  };
+
+  onSpeechEnd = (e) => {
+    console.log('onSpeechEnd: ', e);
+    this.setState({
+      end: '√',
+      searchTerm: this.state.results.toString(),
+    });
+  };
+
+  onSpeechError = (e) => {
+    console.log('onSpeechError: ', e);
+    this.setState({
+      error: JSON.stringify(e.error),
+    });
+  };
+
+  onSpeechResults = (e) => {
+    console.log('onSpeechResults: ', e);
     this.setState({
       results: e.value,
     });
-  }
-  async _startRecognition(e) {
-    console.log('STARSTDRASTR');
+  };
+
+  onSpeechPartialResults = (e) => {
+    console.log('onSpeechPartialResults: ', e);
+    this.setState({
+      partialResults: e.value,
+    });
+  };
+
+  onSpeechVolumeChanged = (e) => {
+    console.log('onSpeechVolumeChanged: ', e);
+    this.setState({
+      pitch: e.value,
+    });
+  };
+
+  _startRecognizing = async () => {
     this.setState({
       recognized: '',
+      pitch: '',
+      error: '',
       started: '',
       results: [],
+      partialResults: [],
+      end: '',
+      searchTerm: '',
+      searchSuccess: false,
     });
+
     try {
       await Voice.start('en-US');
     } catch (e) {
       console.error(e);
     }
+  };
+
+  _stopRecognizing = async () => {
+    try {
+      await Voice.stop();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  _cancelRecognizing = async () => {
+    try {
+      await Voice.cancel();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  _destroyRecognizer = async () => {
+    try {
+      await Voice.destroy();
+    } catch (e) {
+      console.error(e);
+    }
+    this.setState({
+      recognized: '',
+      pitch: '',
+      error: '',
+      started: '',
+      results: [],
+      partialResults: [],
+      end: '',
+      searchTerm: '',
+      searchSuccess: false,
+    });
+  };
+  onSearch() {
+    const term = this.state.results.toString();
+    console.log('search', term);
+    this.setState({
+      searchTerm: term,
+    });
+    axios
+      .get(`/lm/api/v1/searchPub?_format=json&searchTerm=${term}&limit=10`)
+      .then((response) => {
+        console.log('response', response);
+        if (
+          response &&
+          response.status &&
+          Number(response.status) === 200 &&
+          response.data
+        ) {
+          this.setState({ searchSuccess: true });
+        }
+      })
+      .catch((error) => {
+        console.log('error', error);
+      });
   }
   render() {
     return (
-      <View>
-        <Text style={styles.transcript}>Transcript</Text>
-        {this.state.results.map((result, index) => (
-          <Text style={styles.transcript}> {result}</Text>
-        ))}
-        <Text>Voice to Text, Please allow microphone to record voice</Text>
-        <Button
-          style={styles.transcript}
-          onPress={this._startRecognition.bind(this)}
-          title="Start"
+      <View style={styles.container}>
+        <Text style={styles.welcome}>Welcome to React Native Voice!</Text>
+        <Text style={styles.instructions}>
+          Press the button and start speaking or type it.
+        </Text>
+        <TextInput
+          style={styles.inputStyle}
+          autoCapitalize="none"
+          autoCorrect={false}
+          value={this.state.searchTerm}
+          onChangeText={(val) => this.setState({ searchTerm: val })}
         />
+        <Button
+          style={styles.buttonStyle}
+          title="Search"
+          onPress={this.onSearch}
+        />
+        {/* <Text style={styles.stat}>{`Started: ${this.state.started}`}</Text>
+        <Text
+          style={styles.stat}>{`Recognized: ${this.state.recognized}`}</Text>
+        <Text style={styles.stat}>{`Pitch: ${this.state.pitch}`}</Text>
+        <Text style={styles.stat}>{`Error: ${this.state.error}`}</Text> */}
+        <Text style={styles.stat}>Results</Text>
+        {this.state.results.map((result, index) => {
+          return (
+            <Text key={`result-${index}`} style={styles.stat}>
+              {result}
+            </Text>
+          );
+        })}
+        {/* <Text style={styles.stat}>Partial Results</Text>
+        {this.state.partialResults.map((result, index) => {
+          return (
+            <Text key={`partial-result-${index}`} style={styles.stat}>
+              {result}
+            </Text>
+          );
+        })} */}
+        <Text style={styles.stat}>{`End: ${this.state.end}`}</Text>
+        <TouchableHighlight onPress={this._startRecognizing}>
+          <Image style={styles.button} source={require('./button.png')} />
+        </TouchableHighlight>
+        <TouchableHighlight onPress={this._stopRecognizing}>
+          <Text style={styles.action}>Stop Recognizing</Text>
+        </TouchableHighlight>
+        <TouchableHighlight onPress={this._cancelRecognizing}>
+          <Text style={styles.action}>Cancel</Text>
+        </TouchableHighlight>
+        <TouchableHighlight onPress={this._destroyRecognizer}>
+          <Text style={styles.action}>Destroy</Text>
+        </TouchableHighlight>
+        {this.state.searchSuccess && (
+          <Text style={styles.instructions}>Search Successful</Text>
+        )}
       </View>
     );
   }
 }
 const styles = StyleSheet.create({
-  transcript: {
+  button: {
+    width: 50,
+    height: 50,
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5FCFF',
+  },
+  welcome: {
+    fontSize: 20,
+    textAlign: 'center',
+    margin: 10,
+  },
+  action: {
+    textAlign: 'center',
+    color: '#0000FF',
+    marginVertical: 5,
+    fontWeight: 'bold',
+  },
+  instructions: {
+    textAlign: 'center',
+    color: '#333333',
+    marginBottom: 5,
+  },
+  stat: {
     textAlign: 'center',
     color: '#B0171F',
     marginBottom: 1,
-    top: '400%',
+  },
+  inputStyle: {
+    borderColor: 'black',
+    borderWidth: 1,
+    margin: 15,
+    width: 100,
+  },
+  buttonStyle: {
+    color: 'red',
+    fontSize: 30,
+    backgroundColor: 'black',
   },
 });
 
