@@ -12,7 +12,7 @@ import Voice from '@react-native-community/voice';
 import axios from 'axios';
 
 axios.defaults.baseURL =
-  'http://ec2-52-211-229-144.eu-west-1.compute.amazonaws.com:81';
+  '<<URL HERE>>';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 export default class VoiceNative extends React.Component {
   constructor(props) {
